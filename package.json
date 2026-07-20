@@ -1,0 +1,13 @@
+{
+  "name": "iot-environment-dashboard",
+  "version": "1.0.0",
+  "description": "Real-time IoT Environment Monitoring Dashboard (Backend + Frontend)",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}
