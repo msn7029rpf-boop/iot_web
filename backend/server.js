@@ -236,12 +236,16 @@ app.get('/api/environment/weekly-max', async (req, res) => {
 
 // 3. POST Hardware Sensor Endpoint (For ESP32/ESP8266/Arduino physical hardware)
 app.post('/api/environment/telemetry', async (req, res) => {
-    const { temperature, humidity } = req.body;
+    const rawTemp = req.body.temperature ?? req.body.temp ?? req.body.Temp ?? req.body.t;
+    const rawHum = req.body.humidity ?? req.body.hum ?? req.body.Hum ?? req.body.h;
 
-    if (typeof temperature !== 'number' || typeof humidity !== 'number') {
+    const temperature = parseFloat(rawTemp);
+    const humidity = parseFloat(rawHum);
+
+    if (isNaN(temperature) || isNaN(humidity)) {
         return res.status(400).json({
             status: 'error',
-            message: 'Invalid payload. Expecting { temperature: number, humidity: number }'
+            message: 'Invalid payload. Expecting { temperature: number, humidity: number } or { temp: number, hum: number }'
         });
     }
 
