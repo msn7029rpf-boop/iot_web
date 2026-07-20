@@ -70,8 +70,15 @@ function initializeMockHistory() {
 
 initializeMockHistory();
 
+let lastTelemetryReceivedAt = 0;
+
 // --- Real-time Sensor Data Generator (Simulates physical IoT hardware DHT22 when idle) ---
 async function updateSensorData() {
+    // If real ESP32 hardware telemetry was received within the last 45 seconds, DO NOT simulate/overwrite!
+    if (Date.now() - lastTelemetryReceivedAt < 45000) {
+        return;
+    }
+
     // Small random fluctuations around current reading
     const tempDelta = (Math.random() - 0.48) * 0.4;
     const humDelta = (Math.random() - 0.5) * 0.8;
@@ -237,6 +244,8 @@ app.post('/api/environment/telemetry', async (req, res) => {
             message: 'Invalid payload. Expecting { temperature: number, humidity: number }'
         });
     }
+
+    lastTelemetryReceivedAt = Date.now(); // Mark real ESP32 hardware telemetry active!
 
     currentReading = {
         temperature: parseFloat(temperature.toFixed(1)),
