@@ -236,8 +236,20 @@ app.get('/api/environment/weekly-max', async (req, res) => {
 
 // 3. POST Hardware Sensor Endpoint (For ESP32/ESP8266/Arduino physical hardware)
 app.post('/api/environment/telemetry', async (req, res) => {
-    const rawTemp = req.body.temperature ?? req.body.temp ?? req.body.Temp ?? req.body.t;
-    const rawHum = req.body.humidity ?? req.body.hum ?? req.body.Hum ?? req.body.h;
+    let body = req.body;
+    if (typeof body === 'string') {
+        try {
+            body = JSON.parse(body);
+        } catch (e) {
+            body = {};
+        }
+    }
+    if (!body || typeof body !== 'object') {
+        body = {};
+    }
+
+    const rawTemp = body.temperature ?? body.temp ?? body.Temp ?? body.t;
+    const rawHum = body.humidity ?? body.hum ?? body.Hum ?? body.h;
 
     const temperature = parseFloat(rawTemp);
     const humidity = parseFloat(rawHum);
