@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบรายงานสภาพแวดล้อม Real-time IoT Dashboard</title>
+    <meta name="description" content="ระบบรายงานสภาพแวดล้อม อุณหภูมิและความชื้นแบบเรียลไทม์ พร้อมกราฟสรุปค่าสูงสุดประจำสัปดาห์">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="background-globes">
+        <div class="globe globe-1"></div>
+        <div class="globe globe-2"></div>
+    </div>
+
+    <div class="dashboard-container">
+        <!-- Header Section -->
+        <header class="dashboard-header">
+            <div class="brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-cloud-sun-rain"></i>
+                </div>
+                <div>
+                    <h1>ระบบรายงานสภาพแวดล้อม</h1>
+                    <p class="subtitle">IoT Real-time Environment Monitor</p>
+                </div>
+            </div>
+
+            <div class="status-bar">
+                <div class="status-badge connected" id="connection-status">
+                    <span class="status-dot"></span>
+                    <span id="status-text">กำลังเชื่อมต่อ...</span>
+                </div>
+                <div class="timer-badge">
+                    <i class="fa-regular fa-clock"></i>
+                    <span>อัปเดตถัดไปใน <strong id="countdown">10</strong> วินาที</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Current Real-time Metrics Section -->
+        <main class="metrics-grid">
+            <!-- Temperature Card -->
+            <div class="metric-card temp-card">
+                <div class="card-glass"></div>
+                <div class="card-content">
+                    <div class="card-header">
+                        <span class="metric-title">อุณหภูมิในอากาศ</span>
+                        <div class="metric-icon temp-icon">
+                            <i class="fa-solid fa-temperature-three-quarters"></i>
+                        </div>
+                    </div>
+                    <div class="metric-value-container">
+                        <span class="metric-value" id="temp-value">--.-</span>
+                        <span class="metric-unit">°C</span>
+                    </div>
+                    <div class="metric-footer">
+                        <span class="tag" id="temp-status">กำลังโหลด...</span>
+                        <span class="last-updated"><i class="fa-solid fa-arrows-rotate"></i> <span id="last-update-time">--:--:--</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Humidity Card -->
+            <div class="metric-card hum-card">
+                <div class="card-glass"></div>
+                <div class="card-content">
+                    <div class="card-header">
+                        <span class="metric-title">ความชื้นสัมพัทธ์</span>
+                        <div class="metric-icon hum-icon">
+                            <i class="fa-solid fa-droplet"></i>
+                        </div>
+                    </div>
+                    <div class="metric-value-container">
+                        <span class="metric-value" id="hum-value">--.-</span>
+                        <span class="metric-unit">% RH</span>
+                    </div>
+                    <div class="metric-footer">
+                        <span class="tag" id="hum-status">กำลังโหลด...</span>
+                        <span class="update-frequency"><i class="fa-solid fa-sync"></i> อัปเดตทุก 10 วินาที</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Weekly Maximum Chart Section -->
+        <section class="chart-section">
+            <div class="section-header">
+                <div>
+                    <h2><i class="fa-solid fa-chart-line"></i> กราฟภาพรวม 1 สัปดาห์ (ค่าสูงสุดต่อวัน)</h2>
+                    <p class="section-subtitle">แสดงข้อมูลสถิติอุณหภูมิและความชื้นสูงสุดย้อนหลัง 7 วัน</p>
+                </div>
+                <button class="btn-refresh" id="refresh-btn" title="รีเฟรชข้อมูลกราฟ">
+                    <i class="fa-solid fa-arrows-rotate"></i> รีเฟรช
+                </button>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="weeklyMaxChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="dashboard-footer">
+            <p>IoT Environment Monitoring System | Separated Frontend & Backend Architecture</p>
+        </footer>
+    </div>
+
+    <!-- Application Script -->
+    <script src="js/app.js"></script>
+</body>
+</html>
