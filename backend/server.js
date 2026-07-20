@@ -177,11 +177,16 @@ app.post('/api/environment/telemetry', (req, res) => {
 });
 
 // Start backend server
-app.listen(PORT, () => {
-    console.log(`==================================================`);
-    console.log(`🚀 IoT Environment Backend Server Running!`);
-    console.log(`🌐 Web UI: http://localhost:${PORT}`);
-    console.log(`📡 API Current: http://localhost:${PORT}/api/environment/current`);
-    console.log(`📊 API Weekly Max: http://localhost:${PORT}/api/environment/weekly-max`);
-    console.log(`==================================================`);
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`==================================================`);
+        console.log(`🚀 IoT Environment Backend Server Running!`);
+        console.log(`🌐 Web UI: http://localhost:${PORT}`);
+        console.log(`📡 API Current: http://localhost:${PORT}/api/environment/current`);
+        console.log(`📊 API Weekly Max: http://localhost:${PORT}/api/environment/weekly-max`);
+        console.log(`==================================================`);
+    });
+}
+
+module.exports = app;
+
