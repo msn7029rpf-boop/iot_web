@@ -94,25 +94,104 @@ function updateThresholdUI() {
     if (humBadgeHigh) humBadgeHigh.textContent = `🌧️ ชื้นเกินไป (> ${thresholds.humHigh}%)`;
 }
 
-// Setup Event Listeners for Interactive Editing
+// Setup Event Listeners for Interactive Editing on all 3 badges
 function setupThresholdEventListeners() {
-    const triggerTempEdit = () => editTempThresholds();
-    const triggerHumEdit = () => editHumThresholds();
-
-    if (tempBadgesContainer) tempBadgesContainer.addEventListener('click', triggerTempEdit);
-    if (btnEditTemp) btnEditTemp.addEventListener('click', (e) => { e.stopPropagation(); triggerTempEdit(); });
+    // Temperature Badges
+    if (tempBadgeLow) tempBadgeLow.addEventListener('click', (e) => { e.stopPropagation(); editTempLowThreshold(); });
+    if (tempBadgeNormal) tempBadgeNormal.addEventListener('click', (e) => { e.stopPropagation(); editTempThresholds(); });
+    if (tempBadgeHigh) tempBadgeHigh.addEventListener('click', (e) => { e.stopPropagation(); editTempHighThreshold(); });
+    if (btnEditTemp) btnEditTemp.addEventListener('click', (e) => { e.stopPropagation(); editTempThresholds(); });
     
     const tempCanvas = document.getElementById('tempChart');
-    if (tempCanvas) tempCanvas.addEventListener('click', triggerTempEdit);
+    if (tempCanvas) tempCanvas.addEventListener('click', () => editTempThresholds());
 
-    if (humBadgesContainer) humBadgesContainer.addEventListener('click', triggerHumEdit);
-    if (btnEditHum) btnEditHum.addEventListener('click', (e) => { e.stopPropagation(); triggerHumEdit(); });
+    // Humidity Badges
+    if (humBadgeLow) humBadgeLow.addEventListener('click', (e) => { e.stopPropagation(); editHumLowThreshold(); });
+    if (humBadgeNormal) humBadgeNormal.addEventListener('click', (e) => { e.stopPropagation(); editHumThresholds(); });
+    if (humBadgeHigh) humBadgeHigh.addEventListener('click', (e) => { e.stopPropagation(); editHumHighThreshold(); });
+    if (btnEditHum) btnEditHum.addEventListener('click', (e) => { e.stopPropagation(); editHumThresholds(); });
 
     const humCanvas = document.getElementById('humChart');
-    if (humCanvas) humCanvas.addEventListener('click', triggerHumEdit);
+    if (humCanvas) humCanvas.addEventListener('click', () => editHumThresholds());
 }
 
-// Interactive Temperature Threshold Prompt Editor
+// Edit Specifically Temperature Low Threshold (< °C)
+function editTempLowThreshold() {
+    const val = prompt(`[ปรับเกณฑ์อุณหภูมิ - น้อยเกินไป]\nกรอกค่าเกณฑ์ต่ำสุด (เย็นเกินไป < °C):`, thresholds.tempLow);
+    if (val === null) return;
+    const num = parseFloat(val);
+    if (isNaN(num)) {
+        alert('❌ กรุณากรอกตัวเลขที่ถูกต้อง');
+        return;
+    }
+    if (num >= thresholds.tempHigh) {
+        alert(`❌ เกณฑ์ต่ำสุด (${num}°C) ต้องน้อยกว่าเกณฑ์สูงสุด (${thresholds.tempHigh}°C)`);
+        return;
+    }
+    thresholds.tempLow = num;
+    applyThresholdUpdate();
+}
+
+// Edit Specifically Temperature High Threshold (> °C)
+function editTempHighThreshold() {
+    const val = prompt(`[ปรับเกณฑ์อุณหภูมิ - ร้อนเกินไป]\nกรอกค่าเกณฑ์สูงสุด (ร้อนเกินไป > °C):`, thresholds.tempHigh);
+    if (val === null) return;
+    const num = parseFloat(val);
+    if (isNaN(num)) {
+        alert('❌ กรุณากรอกตัวเลขที่ถูกต้อง');
+        return;
+    }
+    if (num <= thresholds.tempLow) {
+        alert(`❌ เกณฑ์สูงสุด (${num}°C) ต้องมากกว่าเกณฑ์ต่ำสุด (${thresholds.tempLow}°C)`);
+        return;
+    }
+    thresholds.tempHigh = num;
+    applyThresholdUpdate();
+}
+
+// Edit Specifically Humidity Low Threshold (< %)
+function editHumLowThreshold() {
+    const val = prompt(`[ปรับเกณฑ์ความชื้น - น้อยเกินไป]\nกรอกค่าเกณฑ์ต่ำสุด (แห้งเกินไป < %):`, thresholds.humLow);
+    if (val === null) return;
+    const num = parseFloat(val);
+    if (isNaN(num)) {
+        alert('❌ กรุณากรอกตัวเลขที่ถูกต้อง');
+        return;
+    }
+    if (num >= thresholds.humHigh) {
+        alert(`❌ เกณฑ์ต่ำสุด (${num}%) ต้องน้อยกว่าเกณฑ์สูงสุด (${thresholds.humHigh}%)`);
+        return;
+    }
+    thresholds.humLow = num;
+    applyThresholdUpdate();
+}
+
+// Edit Specifically Humidity High Threshold (> %)
+function editHumHighThreshold() {
+    const val = prompt(`[ปรับเกณฑ์ความชื้น - ชื้นเกินไป]\nกรอกค่าเกณฑ์สูงสุด (ชื้นเกินไป > %):`, thresholds.humHigh);
+    if (val === null) return;
+    const num = parseFloat(val);
+    if (isNaN(num)) {
+        alert('❌ กรุณากรอกตัวเลขที่ถูกต้อง');
+        return;
+    }
+    if (num <= thresholds.humLow) {
+        alert(`❌ เกณฑ์สูงสุด (${num}%) ต้องมากกว่าเกณฑ์ต่ำสุด (${thresholds.humLow}%)`);
+        return;
+    }
+    thresholds.humHigh = num;
+    applyThresholdUpdate();
+}
+
+// Helper to save and refresh UI after threshold edits
+function applyThresholdUpdate() {
+    saveThresholds();
+    updateThresholdUI();
+    fetchDailyMaxData();
+    if (lastTelemetryData) updateCurrentUI(lastTelemetryData);
+}
+
+// Interactive Temperature Threshold Prompt Editor (Both Low & High)
 function editTempThresholds() {
     const newLowStr = prompt(`[ปรับเกณฑ์อุณหภูมิ]\n1. กรอกค่าเกณฑ์ต่ำสุด (เย็นเกินไป < °C):`, thresholds.tempLow);
     if (newLowStr === null) return;
@@ -134,13 +213,10 @@ function editTempThresholds() {
 
     thresholds.tempLow = newLow;
     thresholds.tempHigh = newHigh;
-    saveThresholds();
-    updateThresholdUI();
-    fetchDailyMaxData();
-    if (lastTelemetryData) updateCurrentUI(lastTelemetryData);
+    applyThresholdUpdate();
 }
 
-// Interactive Humidity Threshold Prompt Editor
+// Interactive Humidity Threshold Prompt Editor (Both Low & High)
 function editHumThresholds() {
     const newLowStr = prompt(`[ปรับเกณฑ์ความชื้น]\n1. กรอกค่าเกณฑ์ต่ำสุด (แห้งเกินไป < %):`, thresholds.humLow);
     if (newLowStr === null) return;
@@ -162,10 +238,7 @@ function editHumThresholds() {
 
     thresholds.humLow = newLow;
     thresholds.humHigh = newHigh;
-    saveThresholds();
-    updateThresholdUI();
-    fetchDailyMaxData();
-    if (lastTelemetryData) updateCurrentUI(lastTelemetryData);
+    applyThresholdUpdate();
 }
 
 // Fetch Current Environmental Metrics (Every 10s)
