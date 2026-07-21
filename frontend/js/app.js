@@ -3,7 +3,8 @@ const API_BASE_URL = window.location.origin.includes('http')
     ? window.location.origin 
     : 'http://localhost:3000';
 
-let weeklyChart = null;
+let realtimeChart = null;
+const MAX_CHART_POINTS = 15; // Keep last 15 points (~2.5 minutes of 10s updates)
 let countdownValue = 10;
 let countdownTimer = null;
 
@@ -22,13 +23,11 @@ const refreshBtn = document.getElementById('refresh-btn');
 document.addEventListener('DOMContentLoaded', () => {
     initChart();
     fetchCurrentData();
-    fetchWeeklyMaxData();
     startCountdown();
 
     if (refreshBtn) {
         refreshBtn.addEventListener('click', () => {
             fetchCurrentData();
-            fetchWeeklyMaxData();
             resetCountdown();
         });
     }
@@ -90,24 +89,12 @@ function updateCurrentUI(data) {
     // Time updated
     const now = new Date(data.timestamp);
     lastUpdateTimeEl.textContent = now.toLocaleTimeString('th-TH');
+
+    // Update real-time chart with new data point
+    updateRealtimeChart(temp, hum, data.timestamp);
 }
 
-// Fetch 1-Week Daily Maximum Data for Chart
-async function fetchWeeklyMaxData() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/environment/weekly-max`);
-        if (!response.ok) throw new Error('Weekly max API failed');
-
-        const result = await response.json();
-        if (result.status === 'success' && Array.isArray(result.data)) {
-            updateChartData(result.data);
-        }
-    } catch (error) {
-        console.error('Error fetching weekly max data:', error);
-    }
-}
-
-// Initialize Chart.js
+// Initialize Real-time Chart.js
 function initChart() {
     const ctx = document.getElementById('weeklyMaxChart').getContext('2d');
     
@@ -120,14 +107,14 @@ function initChart() {
     humGradient.addColorStop(0, 'rgba(0, 198, 255, 0.35)');
     humGradient.addColorStop(1, 'rgba(0, 198, 255, 0.0)');
 
-    weeklyChart = new Chart(ctx, {
+    realtimeChart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'],
+            labels: [],
             datasets: [
                 {
-                    label: 'อุณหภูมิสูงสุด (°C)',
-                    data: [0, 0, 0, 0, 0, 0, 0],
+                    label: 'อุณหภูมิเรียลไทม์ (°C)',
+                    data: [],
                     backgroundColor: tempGradient,
                     borderColor: '#ff5e62',
                     borderWidth: 3,
@@ -141,8 +128,8 @@ function initChart() {
                     yAxisID: 'yTemp'
                 },
                 {
-                    label: 'ความชื้นสูงสุด (% RH)',
-                    data: [0, 0, 0, 0, 0, 0, 0],
+                    label: 'ความชื้นสัมพัทธ์ (% RH)',
+                    data: [],
                     backgroundColor: humGradient,
                     borderColor: '#00c6ff',
                     borderWidth: 3,
@@ -160,6 +147,9 @@ function initChart() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: {
+                duration: 500
+            },
             interaction: {
                 mode: 'index',
                 intersect: false,
@@ -222,18 +212,28 @@ function initChart() {
     });
 }
 
-// Update Chart Data with API Response
-function updateChartData(weeklyData) {
-    if (!weeklyChart) return;
+// Append live data point every 10 seconds
+function updateRealtimeChart(temp, hum, timestamp) {
+    if (!realtimeChart) return;
 
-    const labels = weeklyData.map(item => item.label);
-    const maxTemps = weeklyData.map(item => item.maxTemp);
-    const maxHums = weeklyData.map(item => item.maxHumidity);
+    const timeString = new Date(timestamp).toLocaleTimeString('th-TH', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
 
-    weeklyChart.data.labels = labels;
-    weeklyChart.data.datasets[0].data = maxTemps;
-    weeklyChart.data.datasets[1].data = maxHums;
-    weeklyChart.update();
+    realtimeChart.data.labels.push(timeString);
+    realtimeChart.data.datasets[0].data.push(temp);
+    realtimeChart.data.datasets[1].data.push(hum);
+
+    // Maintain sliding window buffer
+    if (realtimeChart.data.labels.length > MAX_CHART_POINTS) {
+        realtimeChart.data.labels.shift();
+        realtimeChart.data.datasets[0].data.shift();
+        realtimeChart.data.datasets[1].data.shift();
+    }
+
+    realtimeChart.update();
 }
 
 // 10-Second Countdown Timer
@@ -248,8 +248,6 @@ function startCountdown() {
         if (countdownValue <= 0) {
             countdownValue = 10;
             fetchCurrentData();
-            // Periodically refresh chart data too
-            fetchWeeklyMaxData();
         }
         countdownEl.textContent = countdownValue;
     }, 1000);
@@ -270,3 +268,4 @@ function setConnectedStatus(isConnected) {
         statusTextEl.textContent = 'ขาดการเชื่อมต่อกับเซิร์ฟเวอร์';
     }
 }
+
