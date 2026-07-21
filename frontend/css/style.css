@@ -311,6 +311,7 @@ body {
     align-items: center;
     margin-top: 0.5rem;
     flex-wrap: wrap;
+    cursor: pointer;
 }
 
 .threshold-badge {
@@ -318,6 +319,13 @@ body {
     padding: 0.25rem 0.7rem;
     border-radius: 20px;
     font-weight: 500;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    user-select: none;
+}
+
+.threshold-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .threshold-badge.low {
@@ -336,6 +344,32 @@ body {
     background: rgba(239, 68, 68, 0.15);
     color: #ef4444;
     border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.btn-edit-threshold {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px dashed rgba(255, 255, 255, 0.25);
+    color: var(--text-primary);
+    padding: 0.25rem 0.65rem;
+    border-radius: 20px;
+    font-family: var(--font-main);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.btn-edit-threshold:hover {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: #38bdf8;
+    color: #38bdf8;
+    transform: scale(1.05);
+}
+
+.chart-wrapper canvas {
+    cursor: pointer;
 }
 
 .section-header {

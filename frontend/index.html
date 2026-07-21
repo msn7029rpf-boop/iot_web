@@ -99,10 +99,11 @@
                 <div class="section-header">
                     <div>
                         <h2><i class="fa-solid fa-temperature-three-quarters" style="color: #ff5e62;"></i> อุณหภูมิสูงสุดรายวัน (30 วัน)</h2>
-                        <div class="threshold-badges">
-                            <span class="threshold-badge low">❄️ น้อยเกินไป (&lt; 15°C)</span>
-                            <span class="threshold-badge normal">🌿 ปกติ (15–35°C)</span>
-                            <span class="threshold-badge high">☀️ ร้อนเกินไป (&gt; 35°C)</span>
+                        <div class="threshold-badges" id="temp-threshold-badges" title="คลิกเพื่อแก้ไขเกณฑ์อุณหภูมิ ⚙️">
+                            <span class="threshold-badge low" id="temp-badge-low">❄️ น้อยเกินไป (&lt; 15°C)</span>
+                            <span class="threshold-badge normal" id="temp-badge-normal">🌿 ปกติ (15–35°C)</span>
+                            <span class="threshold-badge high" id="temp-badge-high">☀️ ร้อนเกินไป (&gt; 35°C)</span>
+                            <button class="btn-edit-threshold" id="btn-edit-temp" title="ปรับแต่งเกณฑ์อุณหภูมิ"><i class="fa-solid fa-gear"></i> ปรับเกณฑ์</button>
                         </div>
                     </div>
                     <button class="btn-refresh" id="refresh-btn" title="รีเฟรชข้อมูลกราฟ">
@@ -110,7 +111,7 @@
                     </button>
                 </div>
                 <div class="chart-wrapper">
-                    <canvas id="tempChart"></canvas>
+                    <canvas id="tempChart" title="คลิกที่กราฟเพื่อปรับเกณฑ์อุณหภูมิ"></canvas>
                 </div>
             </section>
 
@@ -119,15 +120,16 @@
                 <div class="section-header">
                     <div>
                         <h2><i class="fa-solid fa-droplet" style="color: #00c6ff;"></i> ความชื้นสัมพัทธ์สูงสุดรายวัน (30 วัน)</h2>
-                        <div class="threshold-badges">
-                            <span class="threshold-badge low">🌵 น้อยเกินไป (&lt; 40%)</span>
-                            <span class="threshold-badge normal">💧 ปกติ (40–90%)</span>
-                            <span class="threshold-badge high">🌧️ ชื้นเกินไป (&gt; 90%)</span>
+                        <div class="threshold-badges" id="hum-threshold-badges" title="คลิกเพื่อแก้ไขเกณฑ์ความชื้น ⚙️">
+                            <span class="threshold-badge low" id="hum-badge-low">🌵 น้อยเกินไป (&lt; 40%)</span>
+                            <span class="threshold-badge normal" id="hum-badge-normal">💧 ปกติ (40–90%)</span>
+                            <span class="threshold-badge high" id="hum-badge-high">🌧️ ชื้นเกินไป (&gt; 90%)</span>
+                            <button class="btn-edit-threshold" id="btn-edit-hum" title="ปรับแต่งเกณฑ์ความชื้น"><i class="fa-solid fa-gear"></i> ปรับเกณฑ์</button>
                         </div>
                     </div>
                 </div>
                 <div class="chart-wrapper">
-                    <canvas id="humChart"></canvas>
+                    <canvas id="humChart" title="คลิกที่กราฟเพื่อปรับเกณฑ์ความชื้น"></canvas>
                 </div>
             </section>
         </div>

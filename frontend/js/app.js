@@ -7,6 +7,38 @@ let tempChart = null;
 let humChart = null;
 let countdownValue = 10;
 let countdownTimer = null;
+let lastTelemetryData = null;
+
+// Thresholds State with LocalStorage Persistence
+let thresholds = {
+    tempLow: 15,
+    tempHigh: 35,
+    humLow: 40,
+    humHigh: 90
+};
+
+function loadThresholds() {
+    try {
+        const saved = localStorage.getItem('iot_thresholds');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed.tempLow !== undefined && !isNaN(parsed.tempLow)) thresholds.tempLow = Number(parsed.tempLow);
+            if (parsed.tempHigh !== undefined && !isNaN(parsed.tempHigh)) thresholds.tempHigh = Number(parsed.tempHigh);
+            if (parsed.humLow !== undefined && !isNaN(parsed.humLow)) thresholds.humLow = Number(parsed.humLow);
+            if (parsed.humHigh !== undefined && !isNaN(parsed.humHigh)) thresholds.humHigh = Number(parsed.humHigh);
+        }
+    } catch (e) {
+        console.error('Error loading thresholds from localStorage:', e);
+    }
+}
+
+function saveThresholds() {
+    try {
+        localStorage.setItem('iot_thresholds', JSON.stringify(thresholds));
+    } catch (e) {
+        console.error('Error saving thresholds to localStorage:', e);
+    }
+}
 
 // DOM Elements
 const tempValueEl = document.getElementById('temp-value');
@@ -19,9 +51,25 @@ const connectionStatusEl = document.getElementById('connection-status');
 const statusTextEl = document.getElementById('status-text');
 const refreshBtn = document.getElementById('refresh-btn');
 
+// Threshold Badge Elements
+const tempBadgeLow = document.getElementById('temp-badge-low');
+const tempBadgeNormal = document.getElementById('temp-badge-normal');
+const tempBadgeHigh = document.getElementById('temp-badge-high');
+const btnEditTemp = document.getElementById('btn-edit-temp');
+const tempBadgesContainer = document.getElementById('temp-threshold-badges');
+
+const humBadgeLow = document.getElementById('hum-badge-low');
+const humBadgeNormal = document.getElementById('hum-badge-normal');
+const humBadgeHigh = document.getElementById('hum-badge-high');
+const btnEditHum = document.getElementById('btn-edit-hum');
+const humBadgesContainer = document.getElementById('hum-threshold-badges');
+
 // Initialize Dashboard
 document.addEventListener('DOMContentLoaded', () => {
+    loadThresholds();
+    updateThresholdUI();
     initCharts();
+    setupThresholdEventListeners();
     fetchCurrentData();
     fetchDailyMaxData();
     startCountdown();
@@ -35,6 +83,91 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// Update Threshold Badges Text in HTML
+function updateThresholdUI() {
+    if (tempBadgeLow) tempBadgeLow.textContent = `❄️ น้อยเกินไป (< ${thresholds.tempLow}°C)`;
+    if (tempBadgeNormal) tempBadgeNormal.textContent = `🌿 ปกติ (${thresholds.tempLow}–${thresholds.tempHigh}°C)`;
+    if (tempBadgeHigh) tempBadgeHigh.textContent = `☀️ ร้อนเกินไป (> ${thresholds.tempHigh}°C)`;
+
+    if (humBadgeLow) humBadgeLow.textContent = `🌵 น้อยเกินไป (< ${thresholds.humLow}%)`;
+    if (humBadgeNormal) humBadgeNormal.textContent = `💧 ปกติ (${thresholds.humLow}–${thresholds.humHigh}%)`;
+    if (humBadgeHigh) humBadgeHigh.textContent = `🌧️ ชื้นเกินไป (> ${thresholds.humHigh}%)`;
+}
+
+// Setup Event Listeners for Interactive Editing
+function setupThresholdEventListeners() {
+    const triggerTempEdit = () => editTempThresholds();
+    const triggerHumEdit = () => editHumThresholds();
+
+    if (tempBadgesContainer) tempBadgesContainer.addEventListener('click', triggerTempEdit);
+    if (btnEditTemp) btnEditTemp.addEventListener('click', (e) => { e.stopPropagation(); triggerTempEdit(); });
+    
+    const tempCanvas = document.getElementById('tempChart');
+    if (tempCanvas) tempCanvas.addEventListener('click', triggerTempEdit);
+
+    if (humBadgesContainer) humBadgesContainer.addEventListener('click', triggerHumEdit);
+    if (btnEditHum) btnEditHum.addEventListener('click', (e) => { e.stopPropagation(); triggerHumEdit(); });
+
+    const humCanvas = document.getElementById('humChart');
+    if (humCanvas) humCanvas.addEventListener('click', triggerHumEdit);
+}
+
+// Interactive Temperature Threshold Prompt Editor
+function editTempThresholds() {
+    const newLowStr = prompt(`[ปรับเกณฑ์อุณหภูมิ]\n1. กรอกค่าเกณฑ์ต่ำสุด (เย็นเกินไป < °C):`, thresholds.tempLow);
+    if (newLowStr === null) return;
+    const newLow = parseFloat(newLowStr);
+
+    const newHighStr = prompt(`[ปรับเกณฑ์อุณหภูมิ]\n2. กรอกค่าเกณฑ์สูงสุด (ร้อนเกินไป > °C):`, thresholds.tempHigh);
+    if (newHighStr === null) return;
+    const newHigh = parseFloat(newHighStr);
+
+    if (isNaN(newLow) || isNaN(newHigh)) {
+        alert('❌ กรุณากรอกตัวเลขที่ถูกต้อง');
+        return;
+    }
+
+    if (newLow >= newHigh) {
+        alert('❌ เกณฑ์ต่ำสุด (เย็นเกินไป) ต้องน้อยกว่าเกณฑ์สูงสุด (ร้อนเกินไป)');
+        return;
+    }
+
+    thresholds.tempLow = newLow;
+    thresholds.tempHigh = newHigh;
+    saveThresholds();
+    updateThresholdUI();
+    fetchDailyMaxData();
+    if (lastTelemetryData) updateCurrentUI(lastTelemetryData);
+}
+
+// Interactive Humidity Threshold Prompt Editor
+function editHumThresholds() {
+    const newLowStr = prompt(`[ปรับเกณฑ์ความชื้น]\n1. กรอกค่าเกณฑ์ต่ำสุด (แห้งเกินไป < %):`, thresholds.humLow);
+    if (newLowStr === null) return;
+    const newLow = parseFloat(newLowStr);
+
+    const newHighStr = prompt(`[ปรับเกณฑ์ความชื้น]\n2. กรอกค่าเกณฑ์สูงสุด (ชื้นเกินไป > %):`, thresholds.humHigh);
+    if (newHighStr === null) return;
+    const newHigh = parseFloat(newHighStr);
+
+    if (isNaN(newLow) || isNaN(newHigh)) {
+        alert('❌ กรุณากรอกตัวเลขที่ถูกต้อง');
+        return;
+    }
+
+    if (newLow >= newHigh) {
+        alert('❌ เกณฑ์ต่ำสุด (แห้งเกินไป) ต้องน้อยกว่าเกณฑ์สูงสุด (ชื้นเกินไป)');
+        return;
+    }
+
+    thresholds.humLow = newLow;
+    thresholds.humHigh = newHigh;
+    saveThresholds();
+    updateThresholdUI();
+    fetchDailyMaxData();
+    if (lastTelemetryData) updateCurrentUI(lastTelemetryData);
+}
+
 // Fetch Current Environmental Metrics (Every 10s)
 async function fetchCurrentData() {
     try {
@@ -43,6 +176,7 @@ async function fetchCurrentData() {
         
         const result = await response.json();
         if (result.status === 'success' && result.data) {
+            lastTelemetryData = result.data;
             updateCurrentUI(result.data);
             setConnectedStatus(true);
         }
@@ -52,7 +186,7 @@ async function fetchCurrentData() {
     }
 }
 
-// Update UI with real-time telemetry cards
+// Update UI with real-time telemetry cards based on active thresholds
 function updateCurrentUI(data) {
     const temp = data.temperature;
     const hum = data.humidity;
@@ -61,31 +195,28 @@ function updateCurrentUI(data) {
     tempValueEl.textContent = temp.toFixed(1);
     humValueEl.textContent = hum.toFixed(1);
 
-    // Temperature status evaluation
-    if (temp > 35) {
+    // Temperature status evaluation against custom thresholds
+    if (temp > thresholds.tempHigh) {
         tempStatusEl.textContent = 'ร้อนจัด ☀️';
         tempStatusEl.style.color = '#ef4444';
-    } else if (temp > 30) {
-        tempStatusEl.textContent = ' อากาศร้อน 🌤️';
-        tempStatusEl.style.color = '#f59e0b';
-    } else if (temp >= 24) {
-        tempStatusEl.textContent = ' สบาย/ปกติ 🌿';
-        tempStatusEl.style.color = '#10b981';
-    } else {
+    } else if (temp < thresholds.tempLow) {
         tempStatusEl.textContent = ' อากาศเย็น ❄️';
         tempStatusEl.style.color = '#38bdf8';
+    } else {
+        tempStatusEl.textContent = ' สบาย/ปกติ 🌿';
+        tempStatusEl.style.color = '#10b981';
     }
 
-    // Humidity status evaluation
-    if (hum > 75) {
+    // Humidity status evaluation against custom thresholds
+    if (hum > thresholds.humHigh) {
         humStatusEl.textContent = 'ชื้นสูง 🌧️';
-        humStatusEl.style.color = '#3b82f6';
-    } else if (hum >= 45) {
-        humStatusEl.textContent = ' ความชื้นพอเหมาะ 💧';
-        humStatusEl.style.color = '#10b981';
-    } else {
+        humStatusEl.style.color = '#ef4444';
+    } else if (hum < thresholds.humLow) {
         humStatusEl.textContent = ' อากาศแห้ง 🌵';
         humStatusEl.style.color = '#f59e0b';
+    } else {
+        humStatusEl.textContent = ' ความชื้นพอเหมาะ 💧';
+        humStatusEl.style.color = '#10b981';
     }
 
     // Time updated
@@ -108,7 +239,7 @@ async function fetchDailyMaxData() {
     }
 }
 
-// Initialize Separate Temperature & Humidity Charts with 3-Zone Thresholds
+// Initialize Separate Temperature & Humidity Charts with Dynamic Thresholds
 function initCharts() {
     // 1. Temperature Chart
     const ctxTemp = document.getElementById('tempChart').getContext('2d');
@@ -136,7 +267,7 @@ function initCharts() {
                     pointHoverRadius: 7
                 },
                 {
-                    label: 'เกณฑ์ร้อนเกินไป (> 35°C)',
+                    label: `เกณฑ์ร้อนเกินไป (> ${thresholds.tempHigh}°C)`,
                     data: [],
                     borderColor: 'rgba(239, 68, 68, 0.75)',
                     borderWidth: 2,
@@ -145,7 +276,7 @@ function initCharts() {
                     fill: false
                 },
                 {
-                    label: 'เกณฑ์เย็นเกินไป (< 15°C)',
+                    label: `เกณฑ์เย็นเกินไป (< ${thresholds.tempLow}°C)`,
                     data: [],
                     borderColor: 'rgba(56, 189, 248, 0.75)',
                     borderWidth: 2,
@@ -215,7 +346,7 @@ function initCharts() {
                     pointHoverRadius: 7
                 },
                 {
-                    label: 'เกณฑ์ชื้นเกินไป (> 90%)',
+                    label: `เกณฑ์ชื้นเกินไป (> ${thresholds.humHigh}%)`,
                     data: [],
                     borderColor: 'rgba(239, 68, 68, 0.75)',
                     borderWidth: 2,
@@ -224,7 +355,7 @@ function initCharts() {
                     fill: false
                 },
                 {
-                    label: 'เกณฑ์แห้งเกินไป (< 40%)',
+                    label: `เกณฑ์แห้งเกินไป (< ${thresholds.humLow}%)`,
                     data: [],
                     borderColor: 'rgba(245, 158, 11, 0.75)',
                     borderWidth: 2,
@@ -269,7 +400,7 @@ function initCharts() {
     });
 }
 
-// Update 30-Day Daily Max Data in Both Charts with 3-Zone Threshold Lines
+// Update 30-Day Daily Max Data in Both Charts with Dynamic 3-Zone Threshold Lines
 function updateChartsData(dailyData) {
     if (!tempChart || !humChart) return;
 
@@ -282,15 +413,19 @@ function updateChartsData(dailyData) {
     // Update Temperature Chart
     tempChart.data.labels = labels;
     tempChart.data.datasets[0].data = maxTemps;
-    tempChart.data.datasets[1].data = new Array(dataLength).fill(35); // Upper threshold line 35°C
-    tempChart.data.datasets[2].data = new Array(dataLength).fill(15); // Lower threshold line 15°C
+    tempChart.data.datasets[1].label = `เกณฑ์ร้อนเกินไป (> ${thresholds.tempHigh}°C)`;
+    tempChart.data.datasets[1].data = new Array(dataLength).fill(thresholds.tempHigh);
+    tempChart.data.datasets[2].label = `เกณฑ์เย็นเกินไป (< ${thresholds.tempLow}°C)`;
+    tempChart.data.datasets[2].data = new Array(dataLength).fill(thresholds.tempLow);
     tempChart.update();
 
     // Update Humidity Chart
     humChart.data.labels = labels;
     humChart.data.datasets[0].data = maxHums;
-    humChart.data.datasets[1].data = new Array(dataLength).fill(90); // Upper threshold line 90%
-    humChart.data.datasets[2].data = new Array(dataLength).fill(40); // Lower threshold line 40%
+    humChart.data.datasets[1].label = `เกณฑ์ชื้นเกินไป (> ${thresholds.humHigh}%)`;
+    humChart.data.datasets[1].data = new Array(dataLength).fill(thresholds.humHigh);
+    humChart.data.datasets[2].label = `เกณฑ์แห้งเกินไป (< ${thresholds.humLow}%)`;
+    humChart.data.datasets[2].data = new Array(dataLength).fill(thresholds.humLow);
     humChart.update();
 }
 
