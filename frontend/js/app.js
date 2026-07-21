@@ -9,6 +9,7 @@ let countdownValue = 10;
 let countdownTimer = null;
 let lastTelemetryData = null;
 let cachedDailyData = [];
+let activeToasts = {};
 
 // Thresholds State with LocalStorage Persistence
 let thresholds = {
@@ -51,6 +52,7 @@ const countdownEl = document.getElementById('countdown');
 const connectionStatusEl = document.getElementById('connection-status');
 const statusTextEl = document.getElementById('status-text');
 const refreshBtn = document.getElementById('refresh-btn');
+const toastContainer = document.getElementById('alert-toast-container');
 
 // Export & Date Inputs DOM Elements
 const startDateEl = document.getElementById('export-start-date');
@@ -358,7 +360,56 @@ async function fetchCurrentData() {
     }
 }
 
-// Update UI with real-time telemetry cards based on active thresholds
+// Side Popup Alert Toast System (Stays until closed)
+function showAlertToast(id, type, title, message, iconClass) {
+    if (!toastContainer) return;
+    
+    // If toast with this ID is already displayed on screen, update its message
+    const existingToast = document.getElementById(`toast-${id}`);
+    if (existingToast) {
+        const msgEl = existingToast.querySelector('.toast-message');
+        if (msgEl) msgEl.textContent = message;
+        return;
+    }
+
+    const toastEl = document.createElement('div');
+    toastEl.id = `toast-${id}`;
+    toastEl.className = `alert-toast ${type}`;
+    toastEl.innerHTML = `
+        <div class="toast-icon"><i class="${iconClass}"></i></div>
+        <div class="toast-content">
+            <div class="toast-title">${title}</div>
+            <div class="toast-message">${message}</div>
+        </div>
+        <button class="toast-btn-close" title="ปิดการแจ้งเตือน">&times;</button>
+    `;
+
+    const closeBtn = toastEl.querySelector('.toast-btn-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            closeToast(id);
+        });
+    }
+
+    toastContainer.appendChild(toastEl);
+    activeToasts[id] = true;
+}
+
+function closeToast(id) {
+    const toastEl = document.getElementById(`toast-${id}`);
+    if (toastEl) {
+        toastEl.style.opacity = '0';
+        toastEl.style.transform = 'translateX(50px)';
+        setTimeout(() => {
+            if (toastEl.parentNode) {
+                toastEl.parentNode.removeChild(toastEl);
+            }
+        }, 300);
+    }
+    delete activeToasts[id];
+}
+
+// Update UI with real-time telemetry cards and check threshold breaches
 function updateCurrentUI(data) {
     const temp = data.temperature;
     const hum = data.humidity;
@@ -371,24 +422,36 @@ function updateCurrentUI(data) {
     if (temp > thresholds.tempHigh) {
         tempStatusEl.textContent = 'ร้อนจัด ☀️';
         tempStatusEl.style.color = '#ef4444';
+        showAlertToast('temp-high', 'high', '🚨 เตือนภัย! อุณหภูมิร้อนเกินเกณฑ์', `อุณหภูมิปัจจุบัน ${temp.toFixed(1)}°C สูงกว่าเกณฑ์ที่กำหนด (${thresholds.tempHigh.toFixed(1)}°C)`, 'fa-solid fa-triangle-exclamation');
+        if (activeToasts['temp-low']) closeToast('temp-low');
     } else if (temp < thresholds.tempLow) {
         tempStatusEl.textContent = ' อากาศเย็น ❄️';
         tempStatusEl.style.color = '#38bdf8';
+        showAlertToast('temp-low', 'low', '❄️ เตือนภัย! อุณหภูมิเย็นเกินเกณฑ์', `อุณหภูมิปัจจุบัน ${temp.toFixed(1)}°C ต่ำกว่าเกณฑ์ที่กำหนด (${thresholds.tempLow.toFixed(1)}°C)`, 'fa-solid fa-snowflake');
+        if (activeToasts['temp-high']) closeToast('temp-high');
     } else {
         tempStatusEl.textContent = ' สบาย/ปกติ 🌿';
         tempStatusEl.style.color = '#10b981';
+        if (activeToasts['temp-high']) closeToast('temp-high');
+        if (activeToasts['temp-low']) closeToast('temp-low');
     }
 
     // Humidity status evaluation against custom thresholds
     if (hum > thresholds.humHigh) {
         humStatusEl.textContent = 'ชื้นสูง 🌧️';
         humStatusEl.style.color = '#ef4444';
+        showAlertToast('hum-high', 'high', '🌧️ เตือนภัย! ความชื้นสูงเกินเกณฑ์', `ความชื้นปัจจุบัน ${hum.toFixed(1)}% สูงกว่าเกณฑ์ที่กำหนด (${thresholds.humHigh.toFixed(1)}%)`, 'fa-solid fa-cloud-showers-heavy');
+        if (activeToasts['hum-low']) closeToast('hum-low');
     } else if (hum < thresholds.humLow) {
         humStatusEl.textContent = ' อากาศแห้ง 🌵';
         humStatusEl.style.color = '#f59e0b';
+        showAlertToast('hum-low', 'warn', '🌵 เตือนภัย! ความชื้นแห้งเกินเกณฑ์', `ความชื้นปัจจุบัน ${hum.toFixed(1)}% ต่ำกว่าเกณฑ์ที่กำหนด (${thresholds.humLow.toFixed(1)}%)`, 'fa-solid fa-sun');
+        if (activeToasts['hum-high']) closeToast('hum-high');
     } else {
         humStatusEl.textContent = ' ความชื้นพอเหมาะ 💧';
         humStatusEl.style.color = '#10b981';
+        if (activeToasts['hum-high']) closeToast('hum-high');
+        if (activeToasts['hum-low']) closeToast('hum-low');
     }
 
     // Time updated
