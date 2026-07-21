@@ -287,6 +287,89 @@ body {
     font-weight: 400;
 }
 
+/* Export Toolbar */
+.export-toolbar {
+    background: var(--bg-card);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 1.25rem 1.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.export-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 1.05rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.export-inputs {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.date-input-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.date-input-group input[type="date"] {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.45rem 0.8rem;
+    border-radius: 10px;
+    font-family: var(--font-main);
+    font-size: 0.85rem;
+    outline: none;
+    transition: all 0.2s ease;
+    color-scheme: dark;
+}
+
+.date-input-group input[type="date"]:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+.btn-export {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    color: #ffffff;
+    padding: 0.55rem 1.25rem;
+    border-radius: 12px;
+    font-family: var(--font-main);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+    transition: all 0.2s ease;
+}
+
+.btn-export:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+}
+
+.btn-export:active {
+    transform: translateY(0);
+}
+
 /* Chart Section */
 .charts-grid {
     display: grid;

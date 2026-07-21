@@ -8,6 +8,7 @@ let humChart = null;
 let countdownValue = 10;
 let countdownTimer = null;
 let lastTelemetryData = null;
+let cachedDailyData = [];
 
 // Thresholds State with LocalStorage Persistence
 let thresholds = {
@@ -51,6 +52,11 @@ const connectionStatusEl = document.getElementById('connection-status');
 const statusTextEl = document.getElementById('status-text');
 const refreshBtn = document.getElementById('refresh-btn');
 
+// Export & Date Inputs DOM Elements
+const startDateEl = document.getElementById('export-start-date');
+const endDateEl = document.getElementById('export-end-date');
+const exportBtn = document.getElementById('export-btn');
+
 // Threshold Badge Elements
 const tempBadgeLow = document.getElementById('temp-badge-low');
 const tempBadgeNormal = document.getElementById('temp-badge-normal');
@@ -68,6 +74,7 @@ const humBadgesContainer = document.getElementById('hum-threshold-badges');
 document.addEventListener('DOMContentLoaded', () => {
     loadThresholds();
     updateThresholdUI();
+    initDatePickers();
     initCharts();
     setupThresholdEventListeners();
     fetchCurrentData();
@@ -81,7 +88,99 @@ document.addEventListener('DOMContentLoaded', () => {
             resetCountdown();
         });
     }
+
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            exportDataToCSV();
+        });
+    }
 });
+
+// Initialize Date Range Inputs (Start = 30 days ago, End = Today)
+function initDatePickers() {
+    if (!startDateEl || !endDateEl) return;
+
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+
+    const formatDate = (date) => date.toISOString().split('T')[0];
+
+    startDateEl.value = formatDate(thirtyDaysAgo);
+    endDateEl.value = formatDate(today);
+}
+
+// Export Filtered Daily Data to CSV File on Local Computer
+function exportDataToCSV() {
+    if (!cachedDailyData || cachedDailyData.length === 0) {
+        alert('⚠️ ไม่พบข้อมูลสำหรับส่งออก กรุณารอระบบโหลดข้อมูลสักครู่');
+        return;
+    }
+
+    const startVal = startDateEl ? startDateEl.value : '';
+    const endVal = endDateEl ? endDateEl.value : '';
+
+    if (startVal && endVal && startVal > endVal) {
+        alert('❌ วันที่เริ่มต้นต้องไม่มากกว่าวันที่สิ้นสุด');
+        return;
+    }
+
+    // Filter data by selected date range
+    const filteredData = cachedDailyData.filter(item => {
+        if (startVal && item.date < startVal) return false;
+        if (endVal && item.date > endVal) return false;
+        return true;
+    });
+
+    if (filteredData.length === 0) {
+        alert('⚠️ ไม่พบข้อมูลในช่วงวันที่เลือก');
+        return;
+    }
+
+    // Construct CSV Rows
+    const headers = ['"วันที่"', '"อุณหภูมิสูงสุด (°C)"', '"สถานะอุณหภูมิ"', '"ความชื้นสัมพัทธ์สูงสุด (% RH)"', '"สถานะความชื้น"'];
+    const rows = [headers.join(',')];
+
+    filteredData.forEach(item => {
+        const temp = item.maxTemp;
+        const hum = item.maxHumidity;
+
+        // Status evaluation based on active user thresholds
+        let tempStatus = 'ปกติ';
+        if (temp > thresholds.tempHigh) tempStatus = 'ร้อนจัด';
+        else if (temp < thresholds.tempLow) tempStatus = 'เย็นเกินไป';
+
+        let humStatus = 'ความชื้นพอเหมาะ';
+        if (hum > thresholds.humHigh) humStatus = 'ชื้นสูง';
+        else if (hum < thresholds.humLow) humStatus = 'แห้งเกินไป';
+
+        const row = [
+            `"${item.date}"`,
+            `"${temp.toFixed(1)}"`,
+            `"${tempStatus}"`,
+            `"${hum.toFixed(1)}"`,
+            `"${humStatus}"`
+        ];
+        rows.push(row.join(','));
+    });
+
+    // UTF-8 BOM (\uFEFF) for perfect Thai language encoding in Microsoft Excel
+    const csvContent = '\uFEFF' + rows.join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    
+    // Dynamic file download link
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const filename = `iot_environment_data_${startVal || 'all'}_to_${endVal || 'all'}.csv`;
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
 
 // Update Threshold Badges Text in HTML
 function updateThresholdUI() {
@@ -305,6 +404,7 @@ async function fetchDailyMaxData() {
 
         const result = await response.json();
         if (result.status === 'success' && Array.isArray(result.data)) {
+            cachedDailyData = result.data;
             updateChartsData(result.data);
         }
     } catch (error) {

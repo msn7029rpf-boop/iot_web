@@ -87,10 +87,28 @@
                     <div class="metric-footer">
                         <span class="tag" id="hum-status">กำลังโหลด...</span>
                         <span class="update-frequency"><i class="fa-solid fa-sync"></i> อัปเดตทุก 1 วินาที</span>
-                    </div>
-                </div>
-            </div>
         </main>
+
+        <!-- Export Control Bar -->
+        <div class="export-toolbar">
+            <div class="export-title">
+                <i class="fa-solid fa-file-csv" style="color: #10b981;"></i>
+                <span>ส่งออกข้อมูลเข้าเครื่องคอมพิวเตอร์ (Export CSV)</span>
+            </div>
+            <div class="export-inputs">
+                <div class="date-input-group">
+                    <label for="export-start-date"><i class="fa-regular fa-calendar"></i> เริ่มต้น:</label>
+                    <input type="date" id="export-start-date" title="เลือกวันที่เริ่มต้น">
+                </div>
+                <div class="date-input-group">
+                    <label for="export-end-date"><i class="fa-regular fa-calendar-check"></i> ถึงวันที่:</label>
+                    <input type="date" id="export-end-date" title="เลือกวันที่สิ้นสุด">
+                </div>
+                <button class="btn-export" id="export-btn" title="ดาวน์โหลดไฟล์ CSV ลงเครื่องคอมพิวเตอร์">
+                    <i class="fa-solid fa-download"></i> ดาวน์โหลด CSV
+                </button>
+            </div>
+        </div>
 
         <!-- Charts Grid Section -->
         <div class="charts-grid">
