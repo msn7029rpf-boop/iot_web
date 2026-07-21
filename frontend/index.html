@@ -92,21 +92,45 @@
             </div>
         </main>
 
-        <!-- Weekly Maximum Chart Section -->
-        <section class="chart-section">
-            <div class="section-header">
-                <div>
-                    <h2><i class="fa-solid fa-chart-line"></i> กราฟสรุปค่าสูงสุดรายวัน (ย้อนหลัง 30 วัน)</h2>
-                    <p class="section-subtitle">แสดงข้อมูลสถิติอุณหภูมิและความชื้นสัมพัทธ์สูงสุดในแต่ละวัน ย้อนหลัง 30 วัน</p>
+        <!-- Charts Grid Section -->
+        <div class="charts-grid">
+            <!-- Temperature Chart Card -->
+            <section class="chart-section">
+                <div class="section-header">
+                    <div>
+                        <h2><i class="fa-solid fa-temperature-three-quarters" style="color: #ff5e62;"></i> อุณหภูมิสูงสุดรายวัน (30 วัน)</h2>
+                        <div class="threshold-badges">
+                            <span class="threshold-badge low">❄️ น้อยเกินไป (&lt; 15°C)</span>
+                            <span class="threshold-badge normal">🌿 ปกติ (15–35°C)</span>
+                            <span class="threshold-badge high">☀️ ร้อนเกินไป (&gt; 35°C)</span>
+                        </div>
+                    </div>
+                    <button class="btn-refresh" id="refresh-btn" title="รีเฟรชข้อมูลกราฟ">
+                        <i class="fa-solid fa-arrows-rotate"></i> รีเฟรช
+                    </button>
                 </div>
-                <button class="btn-refresh" id="refresh-btn" title="รีเฟรชข้อมูลกราฟ">
-                    <i class="fa-solid fa-arrows-rotate"></i> รีเฟรช
-                </button>
-            </div>
-            <div class="chart-wrapper">
-                <canvas id="weeklyMaxChart"></canvas>
-            </div>
-        </section>
+                <div class="chart-wrapper">
+                    <canvas id="tempChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Humidity Chart Card -->
+            <section class="chart-section">
+                <div class="section-header">
+                    <div>
+                        <h2><i class="fa-solid fa-droplet" style="color: #00c6ff;"></i> ความชื้นสัมพัทธ์สูงสุดรายวัน (30 วัน)</h2>
+                        <div class="threshold-badges">
+                            <span class="threshold-badge low">🌵 น้อยเกินไป (&lt; 40%)</span>
+                            <span class="threshold-badge normal">💧 ปกติ (40–90%)</span>
+                            <span class="threshold-badge high">🌧️ ชื้นเกินไป (&gt; 90%)</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="humChart"></canvas>
+                </div>
+            </section>
+        </div>
 
         <!-- Footer -->
         <footer class="dashboard-footer">

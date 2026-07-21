@@ -3,7 +3,8 @@ const API_BASE_URL = window.location.origin.includes('http')
     ? window.location.origin 
     : 'http://localhost:3000';
 
-let dailyMaxChart = null;
+let tempChart = null;
+let humChart = null;
 let countdownValue = 10;
 let countdownTimer = null;
 
@@ -20,7 +21,7 @@ const refreshBtn = document.getElementById('refresh-btn');
 
 // Initialize Dashboard
 document.addEventListener('DOMContentLoaded', () => {
-    initChart();
+    initCharts();
     fetchCurrentData();
     fetchDailyMaxData();
     startCountdown();
@@ -92,7 +93,7 @@ function updateCurrentUI(data) {
     lastUpdateTimeEl.textContent = now.toLocaleTimeString('th-TH');
 }
 
-// Fetch 30-Day Daily Maximum Data for Chart
+// Fetch 30-Day Daily Maximum Data for Charts
 async function fetchDailyMaxData() {
     try {
         const response = await fetch(`${API_BASE_URL}/api/environment/weekly-max`);
@@ -100,33 +101,28 @@ async function fetchDailyMaxData() {
 
         const result = await response.json();
         if (result.status === 'success' && Array.isArray(result.data)) {
-            updateChartData(result.data);
+            updateChartsData(result.data);
         }
     } catch (error) {
         console.error('Error fetching 30-day daily max data:', error);
     }
 }
 
-// Initialize 30-Day Daily Max Chart.js
-function initChart() {
-    const ctx = document.getElementById('weeklyMaxChart').getContext('2d');
-    
-    // Gradient definitions
-    const tempGradient = ctx.createLinearGradient(0, 0, 0, 300);
+// Initialize Separate Temperature & Humidity Charts with 3-Zone Thresholds
+function initCharts() {
+    // 1. Temperature Chart
+    const ctxTemp = document.getElementById('tempChart').getContext('2d');
+    const tempGradient = ctxTemp.createLinearGradient(0, 0, 0, 300);
     tempGradient.addColorStop(0, 'rgba(255, 94, 98, 0.35)');
     tempGradient.addColorStop(1, 'rgba(255, 94, 98, 0.0)');
 
-    const humGradient = ctx.createLinearGradient(0, 0, 0, 300);
-    humGradient.addColorStop(0, 'rgba(0, 198, 255, 0.35)');
-    humGradient.addColorStop(1, 'rgba(0, 198, 255, 0.0)');
-
-    dailyMaxChart = new Chart(ctx, {
+    tempChart = new Chart(ctxTemp, {
         type: 'line',
         data: {
             labels: [],
             datasets: [
                 {
-                    label: 'อุณหภูมิสูงสุดประจำวัน (°C)',
+                    label: 'อุณหภูมิสูงสุด (°C)',
                     data: [],
                     backgroundColor: tempGradient,
                     borderColor: '#ff5e62',
@@ -137,11 +133,75 @@ function initChart() {
                     pointBorderColor: '#ffffff',
                     pointBorderWidth: 1.5,
                     pointRadius: 3.5,
-                    pointHoverRadius: 7,
-                    yAxisID: 'yTemp'
+                    pointHoverRadius: 7
                 },
                 {
-                    label: 'ความชื้นสัมพัทธ์สูงสุดประจำวัน (% RH)',
+                    label: 'เกณฑ์ร้อนเกินไป (> 35°C)',
+                    data: [],
+                    borderColor: 'rgba(239, 68, 68, 0.75)',
+                    borderWidth: 2,
+                    borderDash: [6, 6],
+                    pointRadius: 0,
+                    fill: false
+                },
+                {
+                    label: 'เกณฑ์เย็นเกินไป (< 15°C)',
+                    data: [],
+                    borderColor: 'rgba(56, 189, 248, 0.75)',
+                    borderWidth: 2,
+                    borderDash: [6, 6],
+                    pointRadius: 0,
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    labels: { color: '#f8fafc', font: { family: 'Kanit', size: 12 } }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    titleColor: '#f8fafc',
+                    bodyColor: '#cbd5e1',
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    borderWidth: 1,
+                    padding: 12
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#94a3b8', font: { family: 'Kanit', size: 11 }, maxRotation: 45 }
+                },
+                y: {
+                    type: 'linear',
+                    title: { display: true, text: 'อุณหภูมิ (°C)', color: '#ff9966', font: { family: 'Kanit', size: 12 } },
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#ff9966', font: { family: 'Outfit' } },
+                    suggestedMin: 10,
+                    suggestedMax: 45
+                }
+            }
+        }
+    });
+
+    // 2. Humidity Chart
+    const ctxHum = document.getElementById('humChart').getContext('2d');
+    const humGradient = ctxHum.createLinearGradient(0, 0, 0, 300);
+    humGradient.addColorStop(0, 'rgba(0, 198, 255, 0.35)');
+    humGradient.addColorStop(1, 'rgba(0, 198, 255, 0.0)');
+
+    humChart = new Chart(ctxHum, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'ความชื้นสัมพัทธ์สูงสุด (% RH)',
                     data: [],
                     backgroundColor: humGradient,
                     borderColor: '#00c6ff',
@@ -152,24 +212,35 @@ function initChart() {
                     pointBorderColor: '#ffffff',
                     pointBorderWidth: 1.5,
                     pointRadius: 3.5,
-                    pointHoverRadius: 7,
-                    yAxisID: 'yHum'
+                    pointHoverRadius: 7
+                },
+                {
+                    label: 'เกณฑ์ชื้นเกินไป (> 90%)',
+                    data: [],
+                    borderColor: 'rgba(239, 68, 68, 0.75)',
+                    borderWidth: 2,
+                    borderDash: [6, 6],
+                    pointRadius: 0,
+                    fill: false
+                },
+                {
+                    label: 'เกณฑ์แห้งเกินไป (< 40%)',
+                    data: [],
+                    borderColor: 'rgba(245, 158, 11, 0.75)',
+                    borderWidth: 2,
+                    borderDash: [6, 6],
+                    pointRadius: 0,
+                    fill: false
                 }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
+            interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: {
-                    labels: {
-                        color: '#f8fafc',
-                        font: { family: 'Kanit', size: 13 }
-                    }
+                    labels: { color: '#f8fafc', font: { family: 'Kanit', size: 12 } }
                 },
                 tooltip: {
                     backgroundColor: 'rgba(15, 23, 42, 0.9)',
@@ -177,49 +248,20 @@ function initChart() {
                     bodyColor: '#cbd5e1',
                     borderColor: 'rgba(255,255,255,0.1)',
                     borderWidth: 1,
-                    padding: 12,
-                    titleFont: { family: 'Kanit', size: 14, weight: 'bold' },
-                    bodyFont: { family: 'Kanit', size: 13 }
+                    padding: 12
                 }
             },
             scales: {
                 x: {
                     grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                    ticks: { 
-                        color: '#94a3b8', 
-                        font: { family: 'Kanit', size: 11 },
-                        maxRotation: 45,
-                        minRotation: 0
-                    }
+                    ticks: { color: '#94a3b8', font: { family: 'Kanit', size: 11 }, maxRotation: 45 }
                 },
-                yTemp: {
+                y: {
                     type: 'linear',
-                    display: true,
-                    position: 'left',
-                    title: {
-                        display: true,
-                        text: 'อุณหภูมิ (°C)',
-                        color: '#ff9966',
-                        font: { family: 'Kanit', size: 12 }
-                    },
+                    title: { display: true, text: 'ความชื้น (% RH)', color: '#00c6ff', font: { family: 'Kanit', size: 12 } },
                     grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                    ticks: { color: '#ff9966', font: { family: 'Outfit' } },
-                    suggestedMin: 15,
-                    suggestedMax: 45
-                },
-                yHum: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    title: {
-                        display: true,
-                        text: 'ความชื้น (% RH)',
-                        color: '#00c6ff',
-                        font: { family: 'Kanit', size: 12 }
-                    },
-                    grid: { drawOnChartArea: false },
                     ticks: { color: '#00c6ff', font: { family: 'Outfit' } },
-                    suggestedMin: 30,
+                    suggestedMin: 20,
                     suggestedMax: 100
                 }
             }
@@ -227,18 +269,29 @@ function initChart() {
     });
 }
 
-// Update 30-Day Daily Max Chart Data
-function updateChartData(dailyData) {
-    if (!dailyMaxChart) return;
+// Update 30-Day Daily Max Data in Both Charts with 3-Zone Threshold Lines
+function updateChartsData(dailyData) {
+    if (!tempChart || !humChart) return;
 
     const labels = dailyData.map(item => item.label);
     const maxTemps = dailyData.map(item => item.maxTemp);
     const maxHums = dailyData.map(item => item.maxHumidity);
 
-    dailyMaxChart.data.labels = labels;
-    dailyMaxChart.data.datasets[0].data = maxTemps;
-    dailyMaxChart.data.datasets[1].data = maxHums;
-    dailyMaxChart.update();
+    const dataLength = labels.length;
+
+    // Update Temperature Chart
+    tempChart.data.labels = labels;
+    tempChart.data.datasets[0].data = maxTemps;
+    tempChart.data.datasets[1].data = new Array(dataLength).fill(35); // Upper threshold line 35°C
+    tempChart.data.datasets[2].data = new Array(dataLength).fill(15); // Lower threshold line 15°C
+    tempChart.update();
+
+    // Update Humidity Chart
+    humChart.data.labels = labels;
+    humChart.data.datasets[0].data = maxHums;
+    humChart.data.datasets[1].data = new Array(dataLength).fill(90); // Upper threshold line 90%
+    humChart.data.datasets[2].data = new Array(dataLength).fill(40); // Lower threshold line 40%
+    humChart.update();
 }
 
 // 10-Second Countdown Timer for Real-Time Metrics
