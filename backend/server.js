@@ -36,6 +36,13 @@ let currentReading = {
     timestamp: new Date().toISOString()
 };
 
+let globalThresholds = {
+    tempLow: 15,
+    tempHigh: 35,
+    humLow: 40,
+    humHigh: 90
+};
+
 // Memory storage for sensor readings fallback
 const historyReadings = [];
 
@@ -158,6 +165,30 @@ app.get('/api/environment/current', async (req, res) => {
         status: 'success',
         data: currentReading,
         updateIntervalSeconds: 10
+    });
+});
+
+// GET Global Thresholds Settings
+app.get('/api/environment/thresholds', (req, res) => {
+    res.json({
+        status: 'success',
+        data: globalThresholds
+    });
+});
+
+// POST Update Global Thresholds Settings
+app.post('/api/environment/thresholds', (req, res) => {
+    const { tempLow, tempHigh, humLow, humHigh } = req.body || {};
+
+    if (tempLow !== undefined && !isNaN(tempLow)) globalThresholds.tempLow = Number(tempLow);
+    if (tempHigh !== undefined && !isNaN(tempHigh)) globalThresholds.tempHigh = Number(tempHigh);
+    if (humLow !== undefined && !isNaN(humLow)) globalThresholds.humLow = Number(humLow);
+    if (humHigh !== undefined && !isNaN(humHigh)) globalThresholds.humHigh = Number(humHigh);
+
+    res.json({
+        status: 'success',
+        message: 'Global thresholds updated successfully',
+        data: globalThresholds
     });
 });
 

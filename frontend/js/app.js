@@ -19,7 +19,8 @@ let thresholds = {
     humHigh: 90
 };
 
-function loadThresholds() {
+async function loadThresholds() {
+    // 1. Load local cache first for instant UI response
     try {
         const saved = localStorage.getItem('iot_thresholds');
         if (saved) {
@@ -32,13 +33,57 @@ function loadThresholds() {
     } catch (e) {
         console.error('Error loading thresholds from localStorage:', e);
     }
+
+    // 2. Fetch global synchronized thresholds from server API across all devices
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/environment/thresholds`);
+        if (response.ok) {
+            const result = await response.json();
+            if (result.status === 'success' && result.data) {
+                let changed = false;
+                if (thresholds.tempLow !== Number(result.data.tempLow) ||
+                    thresholds.tempHigh !== Number(result.data.tempHigh) ||
+                    thresholds.humLow !== Number(result.data.humLow) ||
+                    thresholds.humHigh !== Number(result.data.humHigh)) {
+                    changed = true;
+                }
+
+                thresholds.tempLow = Number(result.data.tempLow);
+                thresholds.tempHigh = Number(result.data.tempHigh);
+                thresholds.humLow = Number(result.data.humLow);
+                thresholds.humHigh = Number(result.data.humHigh);
+
+                saveLocalThresholds();
+                updateThresholdUI();
+                if (changed) {
+                    fetchDailyMaxData();
+                    if (lastTelemetryData) updateCurrentUI(lastTelemetryData);
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Could not sync global thresholds from server, using local fallback:', e);
+    }
 }
 
-function saveThresholds() {
+function saveLocalThresholds() {
     try {
         localStorage.setItem('iot_thresholds', JSON.stringify(thresholds));
+    } catch (e) {}
+}
+
+async function saveThresholds() {
+    saveLocalThresholds();
+
+    // Send updated thresholds to backend server for global synchronization across all devices
+    try {
+        await fetch(`${API_BASE_URL}/api/environment/thresholds`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(thresholds)
+        });
     } catch (e) {
-        console.error('Error saving thresholds to localStorage:', e);
+        console.error('Error saving global thresholds to server:', e);
     }
 }
 
@@ -345,6 +390,9 @@ function editHumThresholds() {
 // Fetch Current Environmental Metrics (Every 10s)
 async function fetchCurrentData() {
     try {
+        // Periodically sync global thresholds across all devices
+        loadThresholds();
+
         const response = await fetch(`${API_BASE_URL}/api/environment/current`);
         if (!response.ok) throw new Error('Network response failed');
         
