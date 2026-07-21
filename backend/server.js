@@ -40,7 +40,8 @@ let globalThresholds = {
     tempLow: 15,
     tempHigh: 35,
     humLow: 40,
-    humHigh: 90
+    humHigh: 90,
+    updatedAt: 0
 };
 
 // Memory storage for sensor readings fallback
@@ -178,12 +179,17 @@ app.get('/api/environment/thresholds', (req, res) => {
 
 // POST Update Global Thresholds Settings
 app.post('/api/environment/thresholds', (req, res) => {
-    const { tempLow, tempHigh, humLow, humHigh } = req.body || {};
+    const { tempLow, tempHigh, humLow, humHigh, updatedAt } = req.body || {};
 
-    if (tempLow !== undefined && !isNaN(tempLow)) globalThresholds.tempLow = Number(tempLow);
-    if (tempHigh !== undefined && !isNaN(tempHigh)) globalThresholds.tempHigh = Number(tempHigh);
-    if (humLow !== undefined && !isNaN(humLow)) globalThresholds.humLow = Number(humLow);
-    if (humHigh !== undefined && !isNaN(humHigh)) globalThresholds.humHigh = Number(humHigh);
+    const clientTime = Number(updatedAt) || Date.now();
+
+    if (clientTime >= globalThresholds.updatedAt) {
+        if (tempLow !== undefined && !isNaN(tempLow)) globalThresholds.tempLow = Number(tempLow);
+        if (tempHigh !== undefined && !isNaN(tempHigh)) globalThresholds.tempHigh = Number(tempHigh);
+        if (humLow !== undefined && !isNaN(humLow)) globalThresholds.humLow = Number(humLow);
+        if (humHigh !== undefined && !isNaN(humHigh)) globalThresholds.humHigh = Number(humHigh);
+        globalThresholds.updatedAt = clientTime;
+    }
 
     res.json({
         status: 'success',

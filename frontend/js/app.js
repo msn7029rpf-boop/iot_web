@@ -16,13 +16,11 @@ let thresholds = {
     tempLow: 15,
     tempHigh: 35,
     humLow: 40,
-    humHigh: 90
+    humHigh: 90,
+    updatedAt: 0
 };
 
-let isThresholdsLoaded = false;
-
 function loadThresholds() {
-    // 1. Load local custom thresholds first for instant UI response and protection against server resets
     try {
         const saved = localStorage.getItem('iot_thresholds');
         if (saved) {
@@ -31,19 +29,14 @@ function loadThresholds() {
             if (parsed.tempHigh !== undefined && !isNaN(parsed.tempHigh)) thresholds.tempHigh = Number(parsed.tempHigh);
             if (parsed.humLow !== undefined && !isNaN(parsed.humLow)) thresholds.humLow = Number(parsed.humLow);
             if (parsed.humHigh !== undefined && !isNaN(parsed.humHigh)) thresholds.humHigh = Number(parsed.humHigh);
-            thresholds.isCustom = !!parsed.isCustom;
+            if (parsed.updatedAt !== undefined && !isNaN(parsed.updatedAt)) thresholds.updatedAt = Number(parsed.updatedAt);
         }
     } catch (e) {
         console.error('Error loading thresholds from localStorage:', e);
     }
 
     updateThresholdUI();
-
-    // 2. Initial sync with server (only sync from server if user has not set custom local thresholds)
-    if (!isThresholdsLoaded) {
-        isThresholdsLoaded = true;
-        syncServerThresholds();
-    }
+    syncServerThresholds();
 }
 
 async function syncServerThresholds() {
@@ -52,19 +45,23 @@ async function syncServerThresholds() {
         if (response.ok) {
             const result = await response.json();
             if (result.status === 'success' && result.data) {
-                // If user has not customized locally, adopt server thresholds
-                if (!thresholds.isCustom && result.data.isCustom) {
-                    thresholds.tempLow = Number(result.data.tempLow);
-                    thresholds.tempHigh = Number(result.data.tempHigh);
-                    thresholds.humLow = Number(result.data.humLow);
-                    thresholds.humHigh = Number(result.data.humHigh);
-                    thresholds.isCustom = true;
+                const serverData = result.data;
+                const serverUpdatedAt = Number(serverData.updatedAt) || 0;
+
+                // If server has newer threshold settings from another device (mobile or desktop), adopt them!
+                if (serverUpdatedAt > (thresholds.updatedAt || 0)) {
+                    thresholds.tempLow = Number(serverData.tempLow);
+                    thresholds.tempHigh = Number(serverData.tempHigh);
+                    thresholds.humLow = Number(serverData.humLow);
+                    thresholds.humHigh = Number(serverData.humHigh);
+                    thresholds.updatedAt = serverUpdatedAt;
+
                     saveLocalThresholds();
                     updateThresholdUI();
                     fetchDailyMaxData();
                     if (lastTelemetryData) updateCurrentUI(lastTelemetryData);
-                } else if (thresholds.isCustom) {
-                    // Sync local custom thresholds up to server instance
+                } else if ((thresholds.updatedAt || 0) > serverUpdatedAt && (thresholds.updatedAt || 0) > 0) {
+                    // Local thresholds are newer, sync up to server instance
                     fetch(`${API_BASE_URL}/api/environment/thresholds`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -80,16 +77,15 @@ async function syncServerThresholds() {
 
 function saveLocalThresholds() {
     try {
-        thresholds.isCustom = true;
         localStorage.setItem('iot_thresholds', JSON.stringify(thresholds));
     } catch (e) {}
 }
 
 async function saveThresholds() {
-    thresholds.isCustom = true;
+    thresholds.updatedAt = Date.now();
     saveLocalThresholds();
 
-    // Send updated custom thresholds to backend server
+    // Send updated thresholds with timestamp to backend server for global synchronization
     try {
         await fetch(`${API_BASE_URL}/api/environment/thresholds`, {
             method: 'POST',
@@ -404,6 +400,9 @@ function editHumThresholds() {
 // Fetch Current Environmental Metrics (Every 10s)
 async function fetchCurrentData() {
     try {
+        // Continuous timestamp-based threshold sync across devices (Mobile <-> Desktop)
+        syncServerThresholds();
+
         const response = await fetch(`${API_BASE_URL}/api/environment/current`);
         if (!response.ok) throw new Error('Network response failed');
         
