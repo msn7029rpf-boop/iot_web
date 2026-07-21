@@ -4,8 +4,8 @@ const API_BASE_URL = window.location.origin.includes('http')
     : 'http://localhost:3000';
 
 let realtimeChart = null;
-const MAX_CHART_POINTS = 15; // Keep last 15 points (~2.5 minutes of 10s updates)
-let countdownValue = 10;
+const MAX_CHART_POINTS = 60; // Keep last 60 points (1 minute of 1s live updates)
+let countdownValue = 1;
 let countdownTimer = null;
 
 // DOM Elements
@@ -236,9 +236,9 @@ function updateRealtimeChart(temp, hum, timestamp) {
     realtimeChart.update();
 }
 
-// 10-Second Countdown Timer
+// 1-Second Countdown Timer
 function startCountdown() {
-    countdownValue = 10;
+    countdownValue = 1;
     countdownEl.textContent = countdownValue;
 
     if (countdownTimer) clearInterval(countdownTimer);
@@ -246,7 +246,7 @@ function startCountdown() {
     countdownTimer = setInterval(() => {
         countdownValue--;
         if (countdownValue <= 0) {
-            countdownValue = 10;
+            countdownValue = 1;
             fetchCurrentData();
         }
         countdownEl.textContent = countdownValue;
@@ -254,7 +254,7 @@ function startCountdown() {
 }
 
 function resetCountdown() {
-    countdownValue = 10;
+    countdownValue = 1;
     countdownEl.textContent = countdownValue;
 }
 
