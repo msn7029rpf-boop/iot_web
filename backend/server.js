@@ -41,8 +41,8 @@ const historyReadings = [];
 
 function initializeMockHistory() {
     const now = new Date();
-    // Populate past 7 days (including today)
-    for (let dayOffset = 6; dayOffset >= 0; dayOffset--) {
+    // Populate past 30 days (including today)
+    for (let dayOffset = 29; dayOffset >= 0; dayOffset--) {
         const date = new Date(now);
         date.setDate(now.getDate() - dayOffset);
         
@@ -162,16 +162,16 @@ app.get('/api/environment/current', async (req, res) => {
 });
 
 // 2. GET Weekly daily maximum overview (Past 7 Days Max Temperature & Humidity)
-app.get('/api/environment/weekly-max', async (req, res) => {
-    const dayNames = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+// 2. GET 30-Day Daily Maximum Overview (Past 30 Days Max Temperature & Humidity)
+const getDailyMaxHandler = async (req, res) => {
     const daysMap = {};
 
     const now = new Date();
-    for (let i = 6; i >= 0; i--) {
+    for (let i = 29; i >= 0; i--) {
         const d = new Date(now);
         d.setDate(now.getDate() - i);
         const dateKey = d.toISOString().split('T')[0];
-        const dayLabel = `${dayNames[d.getDay()]} (${d.getDate()}/${d.getMonth() + 1})`;
+        const dayLabel = `${d.getDate()}/${d.getMonth() + 1}`;
 
         daysMap[dateKey] = {
             date: dateKey,
@@ -186,12 +186,12 @@ app.get('/api/environment/weekly-max', async (req, res) => {
 
     if (supabase) {
         try {
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
             const { data, error } = await supabase
                 .from('sensor_readings')
                 .select('*')
-                .gte('created_at', sevenDaysAgo.toISOString())
+                .gte('created_at', thirtyDaysAgo.toISOString())
                 .order('created_at', { ascending: true });
 
             if (!error && data && data.length > 0) {
@@ -202,7 +202,7 @@ app.get('/api/environment/weekly-max', async (req, res) => {
                 }));
             }
         } catch (err) {
-            console.error('Supabase fetch weekly max error:', err.message);
+            console.error('Supabase fetch daily max error:', err.message);
         }
     }
 
@@ -220,7 +220,7 @@ app.get('/api/environment/weekly-max', async (req, res) => {
         }
     });
 
-    const weeklyData = Object.values(daysMap).map(day => ({
+    const dailyData = Object.values(daysMap).map(day => ({
         date: day.date,
         label: day.label,
         maxTemp: day.maxTemp === -Infinity ? currentReading.temperature : parseFloat(day.maxTemp.toFixed(1)),
@@ -230,9 +230,12 @@ app.get('/api/environment/weekly-max', async (req, res) => {
 
     res.json({
         status: 'success',
-        data: weeklyData
+        data: dailyData
     });
-});
+};
+
+app.get('/api/environment/weekly-max', getDailyMaxHandler);
+app.get('/api/environment/daily-max', getDailyMaxHandler);
 
 // 3. POST Hardware Sensor Endpoint (For ESP32/ESP8266/Arduino physical hardware)
 app.post('/api/environment/telemetry', async (req, res) => {

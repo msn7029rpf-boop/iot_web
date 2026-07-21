@@ -3,9 +3,8 @@ const API_BASE_URL = window.location.origin.includes('http')
     ? window.location.origin 
     : 'http://localhost:3000';
 
-let realtimeChart = null;
-const MAX_CHART_POINTS = 60; // Keep last 60 points (1 minute of 1s live updates)
-let countdownValue = 1;
+let dailyMaxChart = null;
+let countdownValue = 10;
 let countdownTimer = null;
 
 // DOM Elements
@@ -23,11 +22,13 @@ const refreshBtn = document.getElementById('refresh-btn');
 document.addEventListener('DOMContentLoaded', () => {
     initChart();
     fetchCurrentData();
+    fetchDailyMaxData();
     startCountdown();
 
     if (refreshBtn) {
         refreshBtn.addEventListener('click', () => {
             fetchCurrentData();
+            fetchDailyMaxData();
             resetCountdown();
         });
     }
@@ -50,7 +51,7 @@ async function fetchCurrentData() {
     }
 }
 
-// Update UI with real-time telemetry
+// Update UI with real-time telemetry cards
 function updateCurrentUI(data) {
     const temp = data.temperature;
     const hum = data.humidity;
@@ -89,12 +90,24 @@ function updateCurrentUI(data) {
     // Time updated
     const now = new Date(data.timestamp);
     lastUpdateTimeEl.textContent = now.toLocaleTimeString('th-TH');
-
-    // Update real-time chart with new data point
-    updateRealtimeChart(temp, hum, data.timestamp);
 }
 
-// Initialize Real-time Chart.js
+// Fetch 30-Day Daily Maximum Data for Chart
+async function fetchDailyMaxData() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/environment/weekly-max`);
+        if (!response.ok) throw new Error('Daily max API failed');
+
+        const result = await response.json();
+        if (result.status === 'success' && Array.isArray(result.data)) {
+            updateChartData(result.data);
+        }
+    } catch (error) {
+        console.error('Error fetching 30-day daily max data:', error);
+    }
+}
+
+// Initialize 30-Day Daily Max Chart.js
 function initChart() {
     const ctx = document.getElementById('weeklyMaxChart').getContext('2d');
     
@@ -107,39 +120,39 @@ function initChart() {
     humGradient.addColorStop(0, 'rgba(0, 198, 255, 0.35)');
     humGradient.addColorStop(1, 'rgba(0, 198, 255, 0.0)');
 
-    realtimeChart = new Chart(ctx, {
+    dailyMaxChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: [],
             datasets: [
                 {
-                    label: 'อุณหภูมิเรียลไทม์ (°C)',
+                    label: 'อุณหภูมิสูงสุดประจำวัน (°C)',
                     data: [],
                     backgroundColor: tempGradient,
                     borderColor: '#ff5e62',
                     borderWidth: 3,
-                    tension: 0.4,
+                    tension: 0.3,
                     fill: true,
                     pointBackgroundColor: '#ff5e62',
                     pointBorderColor: '#ffffff',
-                    pointBorderWidth: 2,
-                    pointRadius: 5,
-                    pointHoverRadius: 8,
+                    pointBorderWidth: 1.5,
+                    pointRadius: 3.5,
+                    pointHoverRadius: 7,
                     yAxisID: 'yTemp'
                 },
                 {
-                    label: 'ความชื้นสัมพัทธ์ (% RH)',
+                    label: 'ความชื้นสัมพัทธ์สูงสุดประจำวัน (% RH)',
                     data: [],
                     backgroundColor: humGradient,
                     borderColor: '#00c6ff',
                     borderWidth: 3,
-                    tension: 0.4,
+                    tension: 0.3,
                     fill: true,
                     pointBackgroundColor: '#00c6ff',
                     pointBorderColor: '#ffffff',
-                    pointBorderWidth: 2,
-                    pointRadius: 5,
-                    pointHoverRadius: 8,
+                    pointBorderWidth: 1.5,
+                    pointRadius: 3.5,
+                    pointHoverRadius: 7,
                     yAxisID: 'yHum'
                 }
             ]
@@ -147,9 +160,6 @@ function initChart() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            animation: {
-                duration: 500
-            },
             interaction: {
                 mode: 'index',
                 intersect: false,
@@ -175,7 +185,12 @@ function initChart() {
             scales: {
                 x: {
                     grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                    ticks: { color: '#94a3b8', font: { family: 'Kanit' } }
+                    ticks: { 
+                        color: '#94a3b8', 
+                        font: { family: 'Kanit', size: 11 },
+                        maxRotation: 45,
+                        minRotation: 0
+                    }
                 },
                 yTemp: {
                     type: 'linear',
@@ -212,33 +227,23 @@ function initChart() {
     });
 }
 
-// Append live data point every 10 seconds
-function updateRealtimeChart(temp, hum, timestamp) {
-    if (!realtimeChart) return;
+// Update 30-Day Daily Max Chart Data
+function updateChartData(dailyData) {
+    if (!dailyMaxChart) return;
 
-    const timeString = new Date(timestamp).toLocaleTimeString('th-TH', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    });
+    const labels = dailyData.map(item => item.label);
+    const maxTemps = dailyData.map(item => item.maxTemp);
+    const maxHums = dailyData.map(item => item.maxHumidity);
 
-    realtimeChart.data.labels.push(timeString);
-    realtimeChart.data.datasets[0].data.push(temp);
-    realtimeChart.data.datasets[1].data.push(hum);
-
-    // Maintain sliding window buffer
-    if (realtimeChart.data.labels.length > MAX_CHART_POINTS) {
-        realtimeChart.data.labels.shift();
-        realtimeChart.data.datasets[0].data.shift();
-        realtimeChart.data.datasets[1].data.shift();
-    }
-
-    realtimeChart.update();
+    dailyMaxChart.data.labels = labels;
+    dailyMaxChart.data.datasets[0].data = maxTemps;
+    dailyMaxChart.data.datasets[1].data = maxHums;
+    dailyMaxChart.update();
 }
 
-// 1-Second Countdown Timer
+// 10-Second Countdown Timer for Real-Time Metrics
 function startCountdown() {
-    countdownValue = 1;
+    countdownValue = 10;
     countdownEl.textContent = countdownValue;
 
     if (countdownTimer) clearInterval(countdownTimer);
@@ -246,15 +251,16 @@ function startCountdown() {
     countdownTimer = setInterval(() => {
         countdownValue--;
         if (countdownValue <= 0) {
-            countdownValue = 1;
+            countdownValue = 10;
             fetchCurrentData();
+            fetchDailyMaxData();
         }
         countdownEl.textContent = countdownValue;
     }, 1000);
 }
 
 function resetCountdown() {
-    countdownValue = 1;
+    countdownValue = 10;
     countdownEl.textContent = countdownValue;
 }
 
